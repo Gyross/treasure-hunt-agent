@@ -3,8 +3,8 @@
 CC = gcc
 CFLAGS = -Wall -O3
 
-CSRC = agent.c pipe.c
-HSRC = pipe.h
+CSRC = worldmodel.c agent.c pipe.c
+HSRC = worldmodel.h pipe.h
 OBJ = $(CSRC:.c=.o)
 
 %o:%c $(HSRC)
