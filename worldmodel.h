@@ -21,11 +21,11 @@
 #define TILE_TREASURE   '$'
 
 // Action
-#define ACTION_FORWARD 'F'
-#define ACTION_LEFT    'L'
-#define ACTION_RIGHT   'R'
-#define ACTION_CHOP    'C'
-#define ACTION_UNLOCK  'U'
+#define ACTION_FORWARD 'f'
+#define ACTION_LEFT    'l'
+#define ACTION_RIGHT   'r'
+#define ACTION_CHOP    'c'
+#define ACTION_UNLOCK  'u'
 
 // Direction
 enum Direction{ DIRECTION_UP, 
@@ -53,3 +53,5 @@ void wm_take_action(struct WorldModel* wm, char action);
 
 char wm_get_tile(struct WorldModel* wm, struct Pos pos);
 void wm_set_tile(struct WorldModel* wm, struct Pos pos, char tile_val);
+
+void wm_print(struct WorldModel* wm);

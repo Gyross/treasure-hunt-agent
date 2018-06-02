@@ -10,6 +10,7 @@
 #include <stdbool.h>
 
 #include "pipe.h"
+#include "worldmodel.h"
 
 int   pipe_fd;
 FILE* in_stream;
@@ -63,6 +64,8 @@ int main( int argc, char *argv[] )
   int ch;
   int i,j;
 
+  struct WorldModel* wm = NULL;
+
   if ( argc < 3 ) {
     printf("Usage: %s -p port\n", argv[0] );
     exit(1);
@@ -89,11 +92,20 @@ int main( int argc, char *argv[] )
       }
     }
 
+    if ( wm == NULL ) {
+        wm = wm_create(view);
+    }
+
+    wm_print(wm);
     print_view(); // COMMENT THIS OUT BEFORE SUBMISSION
     action = get_action( view );
+    wm_take_action(wm, action); // MOVE THIS WHEN WE CHANGE ACTION FUNC
+                                // (or maybe we use a different function)
     putc( action, out_stream );
     fflush( out_stream );
   }
+
+  free(wm);
 
   return 0;
 }

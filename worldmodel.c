@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <assert.h>
 
 struct Pos {
     int x;
@@ -74,6 +75,7 @@ struct WorldModel { // The grid
     Direction dir;
     struct Pos pos;
 
+    bool treasure;
     bool key;
     bool axe;
     bool raft;
@@ -137,9 +139,8 @@ void wm_take_action(struct WorldModel* wm, char action) {
             switch(forward_tile) {
                 case TILE_UNKNOWN:
                     // Not possible to enter an unkown tile
-                    fprintf(stderr, "Move into unkown tile");
-                    assert(false);
-                    break;
+                    fprintf(stderr, "Move into unkown tile\n");
+                    //assert(false);
 
                 // No required extra action for these tiles
                 case TILE_HOME:
@@ -177,7 +178,7 @@ void wm_take_action(struct WorldModel* wm, char action) {
                     wm->pos = forward_pos;
                     break;
                 case TILE_STONE:
-                    wm->stones++
+                    wm->stones++;
                     wm_set_tile(wm, forward_pos, TILE_LAND);
                     wm->pos = forward_pos;
                     break;
@@ -193,7 +194,7 @@ void wm_take_action(struct WorldModel* wm, char action) {
                     break;
 
                 default:
-                    fprintf(stderr, "Invalid tile!");
+                    fprintf(stderr, "Invalid tile!\n");
                     assert(false);
             }
             break;
@@ -229,4 +230,18 @@ char wm_get_tile(struct WorldModel* wm, struct Pos pos) {
 
 void wm_set_tile(struct WorldModel* wm, struct Pos pos, char tile_val) {
     wm->grid[pos.x][pos.y] = tile_val;
+}
+
+void wm_print(struct WorldModel* wm) {
+    int i, j;
+    char c;
+    for ( i = 0; i < GRID_SIZE; i++ ) {
+        for ( j = 0; j < GRID_SIZE; j++ ) {
+            c = wm->grid[i][j];
+            printf("%c", c);
+        }
+        printf("\n");
+    }
+
+    printf("Pos: (%d,%d)\n", wm->pos.x, wm->pos.y);
 }
