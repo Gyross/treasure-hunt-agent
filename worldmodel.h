@@ -64,14 +64,4 @@ void wm_walk(struct WorldModel* wm, char* actions);
 bool wm_walk_test_permissible(struct WorldModel* wm, struct Pos pos);
 bool wm_walk_test_goal(struct WorldModel* wm, struct Pos pos);
 
-// PosQueue
-struct PosQueue;
-struct PosNode;
-
-struct PosQueue* pq_create();
-void pq_destroy(struct PosQueue* pq);
-bool pq_empty(struct PosQueue* pq);
-void pq_push(struct PosQueue* pq, struct Pos pos);
-struct Pos pq_pop(struct PosQueue* pq);
-
 #endif
