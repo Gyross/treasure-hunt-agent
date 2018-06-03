@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 // We define home as the center of the grid
-#define HOME_POS 80
+#define HOME_POS 30
 #define GRID_SIZE 2*HOME_POS + 1
 #define VIEW_DIST 2
 #define VIEW_SIZE 2*VIEW_DIST + 1
@@ -32,9 +32,9 @@
 
 // Direction
 enum Direction{ DIRECTION_UP, 
-                 DIRECTION_LEFT, 
-                 DIRECTION_DOWN, 
-                 DIRECTION_RIGHT };
+                DIRECTION_LEFT, 
+                DIRECTION_DOWN, 
+                DIRECTION_RIGHT };
 
 typedef int Direction;
 
@@ -44,6 +44,7 @@ Direction dir_turn_left( Direction dir );
 struct Pos;
 
 struct Pos pos_set( int x, int y );
+bool pos_equal( struct Pos p, struct Pos q );
 struct Pos pos_forward_rel( struct Pos pos, int amount, Direction rel_dir );
 
 // World model
@@ -60,8 +61,19 @@ void wm_set_tile(struct WorldModel* wm, struct Pos pos, char tile_val);
 
 void wm_print(struct WorldModel* wm);
 
-void wm_walk(struct WorldModel* wm, char* actions);
-bool wm_walk_test_permissible(struct WorldModel* wm, struct Pos pos);
-bool wm_walk_test_goal(struct WorldModel* wm, struct Pos pos);
+
+
+enum Goal{ GOAL_EXPLORE,
+           GOAL_CHOP_GRAB,
+           GOAL_WIN };
+
+typedef int Goal;
+
+
+bool wm_dfs(struct WorldModel* old_wm, struct Pos cur_pos, Goal goal,
+         bool seen[GRID_SIZE][GRID_SIZE], int depth_limit, char* actions);
+bool wm_walk(struct WorldModel* wm, char* actions, Goal goal);
+bool wm_walk_test_permissible(struct WorldModel* wm, struct Pos pos, Goal goal);
+bool wm_walk_test_goal(struct WorldModel* wm, Goal goal);
 
 #endif

@@ -19,7 +19,7 @@ FILE* out_stream;
 char view[5][5];
 
 int action_index;
-char actions[10000];
+char actions[10000000];
 
 struct WorldModel* wm = NULL;
 
@@ -31,8 +31,12 @@ char get_action( char view[5][5] ) {
         wm_update_view(wm, view);
     }
 
-    wm_walk(wm, actions);
-
+    if ( !wm_walk(wm, actions, GOAL_EXPLORE) ) {
+        if ( !wm_walk(wm, actions, GOAL_CHOP_GRAB) ) {
+            wm_walk(wm, actions, GOAL_WIN);
+        }
+    }
+        
     if ( actions[0] != 0 ) {
         wm_take_action(wm, actions[0]);
         return actions[0];
