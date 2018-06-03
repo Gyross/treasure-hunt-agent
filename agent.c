@@ -18,12 +18,18 @@ FILE* out_stream;
 
 char view[5][5];
 
-int action_index;
-char actions[10000000];
 
 struct WorldModel* wm = NULL;
 
+int path_index = 0;
+char path[10000000];
+bool win = false;
+bool explore = false;
+bool deep = false;
+
 char get_action( char view[5][5] ) {
+
+    char action = '\0';
 
     if ( wm == NULL ) {
         wm = wm_create(view);
@@ -31,36 +37,49 @@ char get_action( char view[5][5] ) {
         wm_update_view(wm, view);
     }
 
-    if ( !wm_walk(wm, actions, GOAL_EXPLORE) ) {
-        if ( !wm_walk(wm, actions, GOAL_WIN) ) {
-            if ( !wm_walk(wm, actions, GOAL_CHOP) ) {
-                wm_walk(wm, actions, GOAL_GRAB);
+    
+    // If we already have a path just continue on that path
+    if ( win || (deep && path_index <=2) ) {
+        action = path[path_index];
+        path_index++;
+    } else {
+        path_index = 0;
+        deep = false;
+        // Try to find a winning path
+        win = wm_walk(wm, path, GOAL_WIN, 0);
+
+        // If we found a winning path
+        if ( win ) {
+            action = path[path_index];
+            path_index++;
+        } else {
+            // Otherwise try to reveal tiles to find a winning
+            // path
+            explore = wm_walk(wm, path, GOAL_EXPLORE, 0);
+
+            if ( explore ) {
+                action = path[0];
+            } else {
+                // If there are no more paths to reveal, we have to make a choice
+                // Choose a run of depth 3, else 2, else 1
+                int depth;
+                for ( depth = 10; depth > 0; depth-- ) {
+                    if ( wm_walk(wm, path, GOAL_DEPTH, depth) ) {
+                        break;
+                    }
+                }
+
+                action = path[0];
             }
         }
     }
         
-    if ( actions[0] != 0 ) {
-        wm_take_action(wm, actions[0]);
-        return actions[0];
+    // Take the specified actions
+    if ( action != '\0' ) {
+        wm_take_action(wm, action);
     }
 
-  // REPLACE THIS CODE WITH AI TO CHOOSE ACTION
-
-  /*
-  int ch=0;
-
-  printf("Enter Action(s): ");
-
-  while(( ch = getchar()) != -1 ) { // read character from keyboard
-
-    switch( ch  ) { // if character is a valid action, return it
-    case 'F': case 'L': case 'R': case 'C': case 'U': case 'B':
-    case 'f': case 'l': case 'r': case 'c': case 'u': case 'b':
-      return((char) ch);
-    }
-  }
-  */
-  return 0;
+    return action;
 }
 
 void print_view()
@@ -118,9 +137,8 @@ int main( int argc, char *argv[] )
       }
     }
 
-    print_view(); // COMMENT THIS OUT BEFORE SUBMISSION
+    //print_view(); // COMMENT THIS OUT BEFORE SUBMISSION
     action = get_action( view );
-                                // (or maybe we use a different function)
     putc( action, out_stream );
     fflush( out_stream );
   }

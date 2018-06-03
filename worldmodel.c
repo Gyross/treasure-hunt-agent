@@ -83,6 +83,7 @@ Direction dir_turn_left( Direction dir ) {
 
 struct WorldModel { // The grid
     char grid[GRID_SIZE][GRID_SIZE];
+    bool been[GRID_SIZE][GRID_SIZE];
 
     // The agent
     Direction dir;
@@ -109,6 +110,7 @@ struct WorldModel* wm_create(char view[VIEW_SIZE][VIEW_SIZE]) {
     for ( i = 0; i < GRID_SIZE; i++ ) {
         for ( j = 0; j < GRID_SIZE; j++ ) {
             wm->grid[i][j] = TILE_UNKNOWN;
+            wm->been[i][j] = false;
         }
     }
 
@@ -132,6 +134,7 @@ struct WorldModel* wm_create(char view[VIEW_SIZE][VIEW_SIZE]) {
 
     // Replace the home position with the home tile
     wm->grid[HOME_POS][HOME_POS] = TILE_HOME;
+    wm->been[HOME_POS][HOME_POS] = true;
 
     return wm;
 }
@@ -156,6 +159,7 @@ struct WorldModel* wm_copy(struct WorldModel* wm) {
     for ( i = 0; i < GRID_SIZE; i++ ) {
         for ( j = 0; j < GRID_SIZE; j++ ) {
             new_wm->grid[i][j] = wm->grid[i][j];
+            new_wm->been[i][j] = wm->been[i][j];
         }
     }
 
@@ -187,12 +191,14 @@ void wm_take_action(struct WorldModel* wm, char action) {
                     // Not possible to enter an unkown tile
                     fprintf(stderr, "Move into unkown tile\n");
                     //assert(false);
+                    break;
 
                 // No required extra action for these tiles
                 case TILE_HOME:
                 case TILE_LAND:
                 case TILE_USED_STONE:
                     wm->pos = forward_pos;
+                    wm_set_been(wm, forward_pos);
                     break;
 
                 // Need to check for use of stones and rafts
@@ -205,16 +211,21 @@ void wm_take_action(struct WorldModel* wm, char action) {
                             wm_set_tile(wm, forward_pos, TILE_USED_STONE);
                         } else if ( wm->raft ) {
                             wm->raft = false;
+                        } else {
+                            fprintf(stderr, "Suicide move into water!\n");
                         }
                     }
                     
                     wm->pos = forward_pos;
+                    wm_set_been(wm, forward_pos);
                     break;
 
                 // Don't move into obstacles
                 case TILE_TREE:
                 case TILE_DOOR:
                 case TILE_WALL:
+                case TILE_OOB:
+                    fprintf(stderr, "Move into wall!\n");
                     break;
 
                 // For object tiles, pick up the object
@@ -222,21 +233,25 @@ void wm_take_action(struct WorldModel* wm, char action) {
                     wm->key = true;
                     wm_set_tile(wm, forward_pos, TILE_LAND);
                     wm->pos = forward_pos;
+                    wm_set_been(wm, forward_pos);
                     break;
                 case TILE_STONE:
                     wm->stones++;
                     wm_set_tile(wm, forward_pos, TILE_LAND);
                     wm->pos = forward_pos;
+                    wm_set_been(wm, forward_pos);
                     break;
                 case TILE_AXE:
                     wm->axe = true;
                     wm_set_tile(wm, forward_pos, TILE_LAND);
                     wm->pos = forward_pos;
+                    wm_set_been(wm, forward_pos);
                     break;
                 case TILE_TREASURE:
                     wm->treasure = true;
                     wm_set_tile(wm, forward_pos, TILE_LAND);
                     wm->pos = forward_pos;
+                    wm_set_been(wm, forward_pos);
                     break;
 
                 default:
@@ -300,6 +315,14 @@ void wm_set_tile(struct WorldModel* wm, struct Pos pos, char tile_val) {
     wm->grid[pos.y][pos.x] = tile_val;
 }
 
+void wm_set_been(struct WorldModel* wm, struct Pos pos) {
+    wm->been[pos.y][pos.x] = true;
+}
+
+bool wm_get_been(struct WorldModel* wm, struct Pos pos) {
+    return wm->been[pos.y][pos.x];
+}
+
 void wm_print(struct WorldModel* wm) {
     int i, j;
     char c;
@@ -318,7 +341,7 @@ void wm_print(struct WorldModel* wm) {
 
 
 // DFS
-bool wm_dfs(struct WorldModel* old_wm, struct Pos cur_pos, Goal goal,
+bool wm_dfs(struct WorldModel* old_wm, struct Pos cur_pos, Goal goal, int new_req,
          bool seen[GRID_SIZE][GRID_SIZE], int depth_limit, char* actions) {
     
     bool saved_seen[GRID_SIZE][GRID_SIZE];
@@ -341,7 +364,7 @@ bool wm_dfs(struct WorldModel* old_wm, struct Pos cur_pos, Goal goal,
         return false;
     }
 
-    if ( !pos_equal(cur_pos, wm->pos ) ) {
+    if ( !pos_equal(cur_pos, wm->pos) ) {
         // Make all the required turns to move into cur_pos
         // If we are already there this won't make any turns
         if ( pos_equal(cur_pos, pos_forward_rel(wm->pos, 1, dir_turn_left(wm->dir))) ) {
@@ -376,16 +399,21 @@ bool wm_dfs(struct WorldModel* old_wm, struct Pos cur_pos, Goal goal,
         actions[0] = ACTION_FORWARD;
         actions++;
         wm_take_action(wm, ACTION_FORWARD);
+
+        // If we havent been to this tile before, update new_req
+        if ( !wm_get_been(old_wm, cur_pos) ) {
+            new_req--;
+        }
     
     } 
     
     char old_tile = wm_get_tile(old_wm, cur_pos);
 
     // Test if we have found the goal
-    if ( wm_walk_test_goal(wm, goal, old_tile) ) {
+    if ( wm_walk_test_goal(wm, goal, old_tile, new_req) ) {
         // We are at the goal, so we don't need
         // any more actions.
-        //fprintf(stderr, "Goal: (%d,%d)", cur_pos.y, cur_pos.x);
+        //fprintf(stderr, "Goal: (%d,%d)\n", cur_pos.y, cur_pos.x);
         actions[0] = '\0';
         wm_destroy(wm);
         return true;
@@ -434,7 +462,7 @@ bool wm_dfs(struct WorldModel* old_wm, struct Pos cur_pos, Goal goal,
     // Test Walking forward
     if ( !seen[pos_f.y][pos_f.x] ) {
         //fprintf(stderr, "Add: (%d,%d)", pos_f.y, pos_f.x);
-        if ( wm_dfs(wm, pos_f, goal, seen, depth_limit, actions) ) {
+        if ( wm_dfs(wm, pos_f, goal, new_req, seen, depth_limit, actions) ) {
             wm_destroy(wm);
             return true;
         }
@@ -443,7 +471,7 @@ bool wm_dfs(struct WorldModel* old_wm, struct Pos cur_pos, Goal goal,
     // Test walking right
     if ( !seen[pos_r.y][pos_r.x] ) {
         //fprintf(stderr, "Add: (%d,%d)", pos_r.y, pos_r.x);
-        if ( wm_dfs(wm, pos_r, goal, seen, depth_limit, actions) ) {
+        if ( wm_dfs(wm, pos_r, goal, new_req, seen, depth_limit, actions) ) {
             wm_destroy(wm);
             return true;
         }
@@ -452,7 +480,7 @@ bool wm_dfs(struct WorldModel* old_wm, struct Pos cur_pos, Goal goal,
     // Test walking left
     if ( !seen[pos_l.y][pos_l.x] ) {
         //fprintf(stderr, "Add: (%d,%d)", pos_l.y, pos_l.x);
-        if ( wm_dfs(wm, pos_l, goal, seen, depth_limit, actions) ) {
+        if ( wm_dfs(wm, pos_l, goal, new_req, seen, depth_limit, actions) ) {
             wm_destroy(wm);
             return true;
         }
@@ -461,7 +489,7 @@ bool wm_dfs(struct WorldModel* old_wm, struct Pos cur_pos, Goal goal,
     // Test walking backward
     if ( !seen[pos_b.y][pos_b.x] ) {
         //fprintf(stderr, "Add: (%d,%d)", pos_b.y, pos_b.x);
-        if ( wm_dfs(wm, pos_b, goal, seen, depth_limit, actions) ) {
+        if ( wm_dfs(wm, pos_b, goal, new_req, seen, depth_limit, actions) ) {
             wm_destroy(wm);
             return true;
         }
@@ -482,11 +510,11 @@ bool wm_dfs(struct WorldModel* old_wm, struct Pos cur_pos, Goal goal,
     return false;
 }
 
-bool wm_walk(struct WorldModel* wm, char* actions, Goal goal) {
+bool wm_walk(struct WorldModel* wm, char* actions, Goal goal, int new_req) {
     int depth;
-    for( depth = 1; depth < 500; depth++ ) {
+    for( depth = 1; depth < 50; depth++ ) {
         bool seen[GRID_SIZE][GRID_SIZE] = {{0}};
-        if ( wm_dfs(wm, wm->pos, goal, seen, depth, actions) ) {
+        if ( wm_dfs(wm, wm->pos, goal, new_req, seen, depth, actions) ) {
             return true;
         }
     }
@@ -504,7 +532,7 @@ bool wm_walk_test_permissible(struct WorldModel* wm, struct Pos pos, Goal goal) 
     // Universal fails
     
     // We cant ever move into unknown or wall tiles
-    if ( cur_tile == TILE_UNKNOWN || cur_tile == TILE_WALL ) {
+    if ( cur_tile == TILE_UNKNOWN || cur_tile == TILE_WALL || cur_tile == TILE_OOB ) {
         return false;
     }
 
@@ -519,8 +547,8 @@ bool wm_walk_test_permissible(struct WorldModel* wm, struct Pos pos, Goal goal) 
     }
 
     // We can't move into water without a stone or a raft
-    if ( cur_tile == TILE_WATER && !wm->raft &&
-            wm->stones < 0 ) {
+    if ( start_tile != TILE_WATER && cur_tile == TILE_WATER && !wm->raft &&
+            wm->stones <= 0 ) {
         return false;
     }
     
@@ -544,10 +572,15 @@ bool wm_walk_test_permissible(struct WorldModel* wm, struct Pos pos, Goal goal) 
     return true;
 };
 
-bool wm_walk_test_goal(struct WorldModel* wm, Goal goal, char old_tile) {
+bool wm_walk_test_goal(struct WorldModel* wm, Goal goal, char old_tile, int new_req) {
     int i, j;
 
     switch(goal) {
+        case GOAL_DEPTH:
+            if ( new_req == 0 ) {
+                return true;
+            }
+            break;
         case GOAL_CHOP:
             if ( old_tile == TILE_TREE ) {
                 return true;
@@ -570,6 +603,7 @@ bool wm_walk_test_goal(struct WorldModel* wm, Goal goal, char old_tile) {
 
         case GOAL_WIN:
             if ( wm->treasure && wm_get_tile(wm, wm->pos) == TILE_HOME ) {
+                fprintf(stderr, "Win succeeded\n");
                 return true;
             }
             break;

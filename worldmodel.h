@@ -4,13 +4,14 @@
 #include <stdbool.h>
 
 // We define home as the center of the grid
-#define HOME_POS 30
+#define HOME_POS 80
 #define GRID_SIZE 2*HOME_POS + 1
 #define VIEW_DIST 2
 #define VIEW_SIZE 2*VIEW_DIST + 1
 
 // Tiles
 #define TILE_UNKNOWN    '?'
+#define TILE_OOB        '.'
 #define TILE_HOME       'H'
 #define TILE_LAND       ' '
 #define TILE_USED_STONE 'O'
@@ -58,6 +59,8 @@ void wm_update_view(struct WorldModel* wm, char view[VIEW_SIZE][VIEW_SIZE]);
 
 char wm_get_tile(struct WorldModel* wm, struct Pos pos);
 void wm_set_tile(struct WorldModel* wm, struct Pos pos, char tile_val);
+void wm_set_been(struct WorldModel* wm, struct Pos pos);
+bool wm_get_been(struct WorldModel* wm, struct Pos pos); 
 
 void wm_print(struct WorldModel* wm);
 
@@ -66,15 +69,16 @@ void wm_print(struct WorldModel* wm);
 enum Goal{ GOAL_EXPLORE,
            GOAL_CHOP,
            GOAL_GRAB,
-           GOAL_WIN };
+           GOAL_WIN,
+           GOAL_DEPTH};
 
 typedef int Goal;
 
 
-bool wm_dfs(struct WorldModel* old_wm, struct Pos cur_pos, Goal goal,
+bool wm_dfs(struct WorldModel* old_wm, struct Pos cur_pos, Goal goal, int new_req,
          bool seen[GRID_SIZE][GRID_SIZE], int depth_limit, char* actions);
-bool wm_walk(struct WorldModel* wm, char* actions, Goal goal);
+bool wm_walk(struct WorldModel* wm, char* actions, Goal goal, int new_req);
 bool wm_walk_test_permissible(struct WorldModel* wm, struct Pos pos, Goal goal);
-bool wm_walk_test_goal(struct WorldModel* wm, Goal goal, char old_tile);
+bool wm_walk_test_goal(struct WorldModel* wm, Goal goal, char old_tile, int new_req);
 
 #endif
