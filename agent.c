@@ -1,9 +1,35 @@
 /*********************************************
  *  agent.c
- *  Sample Agent for Text-Based Adventure Game
- *  COMP3411 Artificial Intelligence
- *  UNSW Session 1, 2017
 */
+
+/*
+ * THE QUESTION:
+ *
+ * We store the world model as a grid of tiles on the map, alongside
+ * the player's held items.
+ *
+ * The algorithm works by an IDS search over the tiles in the grid.
+ * The IDS keeps track of which nodes have been visited and doesn't visit
+ * nodes twice, unless an object has been picked up along a path.
+ * The algorithm can search for 3 goals:
+ * - Win, which tries to find a path to the state where the player
+ *   holds the treasure and has returned to the starting tile.
+ * - Explore, which tries to find a path to a tile that will reveal
+ *   tiles on the map without crossing water, picking up stones or
+ *   destroying trees.
+ * - Deep, which tries to find a path to a certain number of tiles
+ *   that haven't been travelled to yet.
+ * We try these in order to find a path. Deep only needs to be invoked
+ * if we cannot see a full path to the treasure from initial exploration.
+ *
+ * Originally an abstracted graph version of the map was used, where nodes
+ * represented islands or regions on islands seperated by trees, and 
+ * edges represented the obstacles. This proved difficult as the same tree
+ * can seperate more than 2 sections of an island from each other, so
+ * the edge representation broke down. For this reason I opted for the
+ * simpler iterative deepening search method.
+ *
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
