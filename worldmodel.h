@@ -64,7 +64,8 @@ void wm_print(struct WorldModel* wm);
 
 
 enum Goal{ GOAL_EXPLORE,
-           GOAL_CHOP_GRAB,
+           GOAL_CHOP,
+           GOAL_GRAB,
            GOAL_WIN };
 
 typedef int Goal;
@@ -74,6 +75,6 @@ bool wm_dfs(struct WorldModel* old_wm, struct Pos cur_pos, Goal goal,
          bool seen[GRID_SIZE][GRID_SIZE], int depth_limit, char* actions);
 bool wm_walk(struct WorldModel* wm, char* actions, Goal goal);
 bool wm_walk_test_permissible(struct WorldModel* wm, struct Pos pos, Goal goal);
-bool wm_walk_test_goal(struct WorldModel* wm, Goal goal);
+bool wm_walk_test_goal(struct WorldModel* wm, Goal goal, char old_tile);
 
 #endif

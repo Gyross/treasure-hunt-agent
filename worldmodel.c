@@ -378,10 +378,11 @@ bool wm_dfs(struct WorldModel* old_wm, struct Pos cur_pos, Goal goal,
         wm_take_action(wm, ACTION_FORWARD);
     
     } 
-
+    
+    char old_tile = wm_get_tile(old_wm, cur_pos);
 
     // Test if we have found the goal
-    if ( wm_walk_test_goal(wm, goal) ) {
+    if ( wm_walk_test_goal(wm, goal, old_tile) ) {
         // We are at the goal, so we don't need
         // any more actions.
         //fprintf(stderr, "Goal: (%d,%d)", cur_pos.y, cur_pos.x);
@@ -400,9 +401,7 @@ bool wm_dfs(struct WorldModel* old_wm, struct Pos cur_pos, Goal goal,
 
     // Now if we hit an obstacle or picked up an object we need to save the old seen
     // array and clear it. We restore it at the end of the function
-    char old_tile = wm_get_tile(old_wm, cur_pos);
     if ( old_tile == TILE_KEY ||
-         old_tile == TILE_WATER ||
          old_tile == TILE_TREE ||
          old_tile == TILE_DOOR ||
          old_tile == TILE_AXE ||
@@ -485,7 +484,7 @@ bool wm_dfs(struct WorldModel* old_wm, struct Pos cur_pos, Goal goal,
 
 bool wm_walk(struct WorldModel* wm, char* actions, Goal goal) {
     int depth;
-    for( depth = 1; depth < 100; depth++ ) {
+    for( depth = 1; depth < 500; depth++ ) {
         bool seen[GRID_SIZE][GRID_SIZE] = {{0}};
         if ( wm_dfs(wm, wm->pos, goal, seen, depth, actions) ) {
             return true;
@@ -526,28 +525,40 @@ bool wm_walk_test_permissible(struct WorldModel* wm, struct Pos pos, Goal goal) 
     }
     
     // If we are exploring
-    if ( goal == GOAL_EXPLORE || goal == GOAL_CHOP_GRAB) {
+    if ( goal == GOAL_EXPLORE || goal == GOAL_CHOP || goal == GOAL_GRAB ) {
         // We can't enter or leave water
         if ( ( start_tile == TILE_WATER && cur_tile != TILE_WATER ) ||
              ( start_tile != TILE_WATER && cur_tile == TILE_WATER ) ) {
             return false;
         }
+    }
 
-        // If we don't allow choppiing
-        if ( goal == GOAL_EXPLORE && ( cur_tile == TILE_STONE || cur_tile == TILE_TREE ) ) {
-            return false;
-        }
+    if ( (goal == GOAL_CHOP || goal == GOAL_EXPLORE) && cur_tile == TILE_STONE ) {
+        return false;
+    }
+
+    if ( (goal == GOAL_EXPLORE || goal == GOAL_GRAB) && cur_tile == TILE_TREE ) {
+        return false;
     }
 
     return true;
 };
 
-bool wm_walk_test_goal(struct WorldModel* wm, Goal goal) {
+bool wm_walk_test_goal(struct WorldModel* wm, Goal goal, char old_tile) {
     int i, j;
 
     switch(goal) {
+        case GOAL_CHOP:
+            if ( old_tile == TILE_TREE ) {
+                return true;
+            }
+            break;
+        case GOAL_GRAB:
+            if ( old_tile == TILE_STONE || old_tile == TILE_KEY || old_tile == TILE_AXE ) {
+                return true;
+            }
+            break;
         case GOAL_EXPLORE:
-        case GOAL_CHOP_GRAB:
             for ( i = wm->pos.y - VIEW_DIST; i <= wm->pos.y + VIEW_DIST; i++ ) {
                 for ( j = wm->pos.x - VIEW_DIST; j <= wm->pos.x + VIEW_DIST; j++ ) {
                     if ( wm->grid[i][j] == TILE_UNKNOWN ) {

@@ -32,8 +32,10 @@ char get_action( char view[5][5] ) {
     }
 
     if ( !wm_walk(wm, actions, GOAL_EXPLORE) ) {
-        if ( !wm_walk(wm, actions, GOAL_CHOP_GRAB) ) {
-            wm_walk(wm, actions, GOAL_WIN);
+        if ( !wm_walk(wm, actions, GOAL_WIN) ) {
+            if ( !wm_walk(wm, actions, GOAL_CHOP) ) {
+                wm_walk(wm, actions, GOAL_GRAB);
+            }
         }
     }
         
