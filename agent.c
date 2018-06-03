@@ -18,10 +18,29 @@ FILE* out_stream;
 
 char view[5][5];
 
+int action_index;
+char actions[10000];
+
+struct WorldModel* wm = NULL;
+
 char get_action( char view[5][5] ) {
+
+    if ( wm == NULL ) {
+        wm = wm_create(view);
+    } else {
+        wm_update_view(wm, view);
+    }
+
+    wm_walk(wm, actions);
+
+    if ( actions[0] != 0 ) {
+        wm_take_action(wm, actions[0]);
+        return actions[0];
+    }
 
   // REPLACE THIS CODE WITH AI TO CHOOSE ACTION
 
+  /*
   int ch=0;
 
   printf("Enter Action(s): ");
@@ -34,6 +53,7 @@ char get_action( char view[5][5] ) {
       return((char) ch);
     }
   }
+  */
   return 0;
 }
 
@@ -92,14 +112,8 @@ int main( int argc, char *argv[] )
       }
     }
 
-    if ( wm == NULL ) {
-        wm = wm_create(view);
-    }
-
-    wm_print(wm);
     print_view(); // COMMENT THIS OUT BEFORE SUBMISSION
     action = get_action( view );
-    wm_take_action(wm, action); // MOVE THIS WHEN WE CHANGE ACTION FUNC
                                 // (or maybe we use a different function)
     putc( action, out_stream );
     fflush( out_stream );
