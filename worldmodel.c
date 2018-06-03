@@ -273,12 +273,97 @@ void wm_print(struct WorldModel* wm) {
 }
 
 
+
+
+// DFS
+bool dfs(struct WorldModel* wm, struct Pos cur_pos, Direction cur_dir,
+         bool seen[GRID_SIZE][GRID_SIZE], int depth_limit, char* actions) {
+    
+    fprintf(stderr, "Begin: (%d,%d)", cur_pos.y, cur_pos.x);
+
+    // Test if we have found the goal
+    if ( wm_walk_test_goal(wm, cur_pos) ) {
+        // We are at the goal, so we don't need
+        // any more actions.
+        fprintf(stderr, "Goal: (%d,%d)", cur_pos.y, cur_pos.x);
+        actions[0] = '\0';
+        return true;
+    } 
+
+    if ( depth_limit == 0 ) {
+        return false;
+    }
+
+    depth_limit--;
+    
+    // Mark adjacent tiles as seen
+    struct Pos pos_f = pos_forward_rel(cur_pos, 1, cur_dir);
+    struct Pos pos_r = pos_forward_rel(cur_pos, 1, dir_turn_right(cur_dir));
+    struct Pos pos_l =  pos_forward_rel(cur_pos, 1, dir_turn_left(cur_dir));
+    struct Pos pos_b = pos_forward_rel(cur_pos, -1, cur_dir);
+    bool seen_f = seen[pos_f.y][pos_f.x];
+    bool seen_r = seen[pos_r.y][pos_r.x];
+    bool seen_l = seen[pos_l.y][pos_l.x];   
+    bool seen_b = seen[pos_b.y][pos_b.x];
+    seen[pos_f.y][pos_f.x] = true;
+    seen[pos_r.y][pos_r.x] = true;
+    seen[pos_l.y][pos_l.x] = true;
+    seen[pos_b.y][pos_b.x] = true;
+
+    // Test Walking forward
+    if ( !seen_f && wm_walk_test_permissible(wm, pos_f) ) {
+        fprintf(stderr, "Add: (%d,%d)", pos_f.y, pos_f.x);
+        actions[0] = 'f';
+        if ( dfs(wm, pos_f, cur_dir, seen, depth_limit, actions+1) ) {
+            return true;
+        }
+    }
+
+    // Test walking right
+    if ( !seen_r && wm_walk_test_permissible(wm, pos_r) ) {
+        fprintf(stderr, "Add: (%d,%d)", pos_r.y, pos_r.x);
+        actions[0] = 'r';
+        actions[1] = 'f';
+        if ( dfs(wm, pos_r, dir_turn_right(cur_dir),
+                              seen, depth_limit, actions+2) ) {
+            return true;
+        }
+    }
+
+    // Test walking left
+    if ( !seen_l && wm_walk_test_permissible(wm, pos_l) ) {
+        fprintf(stderr, "Add: (%d,%d)", pos_l.y, pos_l.x);
+        actions[0] = 'l';
+        actions[1] = 'f';
+        if ( dfs(wm, pos_l, dir_turn_left(cur_dir), 
+                              seen, depth_limit, actions+2) ) {
+            return true;
+        }
+    }
+
+    // Test walking backward
+    if ( !seen_b && wm_walk_test_permissible(wm, pos_b) ) {
+        fprintf(stderr, "Add: (%d,%d)", pos_b.y, pos_b.x);
+        actions[0] = 'l';
+        actions[1] = 'l';
+        actions[2] = 'f';
+        if ( dfs(wm, pos_b, dir_turn_left(dir_turn_left(cur_dir)), 
+                              seen, depth_limit, actions+3) ) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+
 // Simple BFS on tiles in the grid
 // This is used to find all the tiles we need to explore, as well as
 // finding paths to items within a section of the map.
 // We can't do a BFS or even IDS on the state space, since the state space grows
 // exponentially. The grid has a fixed size, and therefore BFS is guaranteed to
 // be fast.
+/*
 void wm_walk(struct WorldModel* wm, char* actions) {
     bool tile_checked[GRID_SIZE][GRID_SIZE] = {{0}};
     struct PosQueue* pq = pq_create();
@@ -416,6 +501,20 @@ void wm_walk(struct WorldModel* wm, char* actions) {
     }
 
     fprintf(stderr, "Path: %s", actions);
+}
+*/
+
+void wm_walk(struct WorldModel* wm, char* actions) {
+    int depth;
+    for( depth = 1; depth < 100; depth++ ) {
+        bool seen[GRID_SIZE][GRID_SIZE] = {{0}};
+        seen[wm->pos.y][wm->pos.x] = true;
+        if ( dfs(wm, wm->pos, wm->dir, seen, depth, actions) ) {
+            return;
+        }
+    }
+
+    actions[0] = '\0';
 }
 
 
